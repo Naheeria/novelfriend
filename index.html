@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>소설 창작 도우미</title>
+
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f7f8;
+    --card:#ffffff;
+    --muted:#9aa0a6;
+    --accent:#3b82f6;
+    --danger:#ef4444;
+    --line:#e5e7eb;
+    --radius:12px;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Pretendard", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:var(--bg);
+    color:#1f2937;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    position:sticky; top:0; z-index:60;
+    background:var(--card);
+    border-bottom:1px solid var(--line);
+    padding:14px 18px;
+    display:flex; align-items:center; gap:12px;
+  }
+  header h1{ margin:0; font-size:18px; font-weight:700; }
+
+  /* layout */
+  .wrap{
+    max-width:1400px;
+    margin:18px auto;
+    padding:0 18px 60px;
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    gap:18px;
+    align-items:start;
+  }
+
+  /* sidebar (tabs) */
+  .sidebar{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:12px;
+    border:1px solid var(--line);
+    height:fit-content;
+  }
+  .tabs{ display:flex; flex-direction:column; gap:8px; }
+  .tab-btn{
+    display:flex; align-items:center; gap:10px;
+    padding:10px; border-radius:10px; border:none; cursor:pointer;
+    background:transparent; color:var(--muted); font-weight:700; text-align:left; font-size:14px;
+  }
+  .tab-btn.active{ background:var(--accent); color:#fff; }
+
+  /* main */
+  .main { min-height:200px; }
+
+  .section-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:14px;
+    border:1px solid var(--line);
+    margin-bottom:16px;
+  }
+
+  h2{ margin:6px 0 12px; font-size:15px; font-weight:700; color:#111827; }
+
+  /* Form Elements */
+  input, textarea, select{
+    width: 100%;
+    padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:#fff;
+    font-size:14px; color:#111827;
+    margin-top:4px; /* label과의 간격 */
+    margin-bottom:12px; /* 다음 요소와의 간격 */
+  }
+  textarea{ resize:vertical; min-height:72px; }
+  
+  /* Select specific for Modal */
+  .modal-content select:not([multiple]){
+      padding: 10px 12px;
+  }
+  .modal-content select[multiple]{
+    height: 150px; /* 다중 선택 박스 높이 지정 */
+    margin-bottom: 8px;
+    padding: 8px 10px;
+  }
+
+  .btn {
+    background:var(--accent); color:#fff; border:none; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700;
+    transition: background-color 0.2s;
+  }
+  .btn:hover{ background:#2563eb; }
+  .btn.ghost { 
+    background:transparent; border:1px solid var(--line); color:var(--muted); font-weight:700; 
+    transition: background-color 0.2s, opacity 0.2s;
+  }
+  .btn.ghost:hover{ background:#f3f4f6; }
+  .btn.ghost:disabled { 
+    opacity: 0.6; 
+    cursor: not-allowed; 
+    background: #f9fafb !important;
+    border-color: #f3f4f6 !important;
+    color: var(--muted) !important;
+  }
+
+  /* 1. ✨추가: '+' 버튼에 대한 명시적인 CSS 스타일 */
+  .add-card-btn {
+    width: 100%; 
+    padding: 8px; 
+    border: 1px dashed var(--line); 
+    border-radius: 8px; 
+    background: transparent; 
+    color: var(--muted); 
+    font-size: 14px; 
+    font-weight: 700; 
+    cursor: pointer; 
+    margin-top: 4px; 
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .add-card-btn:hover {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+
+  /* ======================================= */
+  /* 캡처 관련 스타일 */
+  /* ======================================= */
+  .capture-expand {
+      width: fit-content !important; 
+      max-width: none !important;
+  }
+  /* 캡처 시 컬럼 높이 제한을 해제하는 클래스 (JS에서 추가/제거) */
+  .column.capture-full-height {
+      max-height: none !important;
+      height: fit-content !important;
+      overflow: visible !important; /* 스크롤바도 없앰 */
+  }
+
+
+  /* ======================================= */
+  /* 2. 캐릭터 정리 카드 스타일 */
+  /* ======================================= */
+  #character-list{ 
+    display:grid; 
+    grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); 
+    gap:12px; 
+    margin-top:6px; 
+  }
+
+  .char-card{
+    background:var(--card); border-radius:10px; padding:12px; border:1px solid var(--line);
+    position:relative;
+    min-height: 100px;
+  }
+  .char-card .char-name{ font-weight:700; margin-bottom:6px; }
+  .char-card .char-desc{ font-size:13px; color:var(--muted); min-height:36px; white-space: pre-wrap;}
+
+  .icon-btn{
+    position:absolute; top:8px; right:8px; background:transparent; border:none; cursor:pointer; color:var(--muted);
+    padding:6px; border-radius:6px;
+  }
+  .icon-btn.danger{ color:var(--danger); right:40px; }
+  
+  /* ======================================= */
+  /* 3. 플롯 보드 스타일 */
+  /* ======================================= */
+  .board{
+    display:flex; gap:12px; align-items:flex-start; padding:8px 2px; overflow:auto;
+  }
+  .column{
+    background:var(--card);
+    min-width:260px; 
+    flex:0 0 280px; 
+    border-radius:10px; padding:12px; border:1px solid var(--line);
+    display:flex; flex-direction:column; 
+    max-height:72vh; /* 평소에는 높이 제한 적용 */
+  }
+  .col-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; font-weight:800; font-size:14px; color:#111827; }
+  .col-head .count{ font-size:13px; color:var(--muted); font-weight:600; }
+
+  /* 카드가 없을 때도 드롭존 역할을 할 수 있도록 최소 높이 확보 */
+  .cards{ overflow:auto; padding-right:6px; min-height: 10px; } 
+  .plot-card{
+    background:#fff; border-radius:8px; padding:10px; margin-bottom:10px; border:1px solid var(--line);
+    position:relative; cursor:grab;
+  }
+  .plot-card.dragging{ opacity:0.6; transform:scale(0.997); }
+  .plot-card .title{ font-weight:700; margin-bottom:6px; font-size:14px; }
+  .plot-card .content{ font-size:13px; color:var(--muted); margin-bottom:8px; white-space: pre-wrap;} 
+  .plot-card .tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tag{ font-size:12px; padding:4px 8px; background:#eef2ff; border-radius:8px; color:#2a3a9d; }
+
+  .plot-card .card-actions{ position:absolute; top:8px; right:8px; display:flex; gap:6px; }
+
+  /* 모달 스타일 (생략) */
+  .modal{
+    display:none; 
+    position:fixed; 
+    inset:0; 
+    background:rgba(2,6,23,0.5); 
+    z-index:90; 
+    align-items:center; 
+    justify-content:center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .modal.open{ 
+    display:flex; 
+    opacity: 1; 
+  }
+  .modal-content{
+    width:92%; 
+    max-width:480px; 
+    background:var(--card); 
+    border-radius:var(--radius); 
+    padding:24px; 
+    border:1px solid var(--line);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); 
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+  }
+  .modal.open .modal-content{
+    transform: translateY(0);
+  }
+  .modal-head{ 
+    display:flex; 
+    align-items:center; 
+    justify-content:space-between; 
+    margin-bottom:18px; 
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #111827;
+  }
+  .close{ 
+    background:transparent; 
+    border:none; 
+    font-size:24px; 
+    cursor:pointer; 
+    color:var(--muted);
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .close:hover { color: #555; }
+  
+  /* Label styling */
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 4px;
+  }
+
+  /* responsive */
+  @media (max-width: 980px){
+    .wrap{ grid-template-columns:1fr; }
+    .board{ padding-bottom:18px; }
+    .column{ min-width:86vw; flex:0 0 86vw; }
+    /* 모바일에서 캐릭터 카드 크기 조정 */
+    #character-list{ grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); } 
+    .sidebar{ order: -1; display:flex; }
+    .tab-btn { font-size:13px; padding:8px; }
+  }
+
+  /* hide elements during capture */
+  .no-print{ visibility:hidden !important; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>소설 창작 도우미</h1>
+  </header>
+
+  <div class="wrap">
+    <aside class="sidebar">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="character" onclick="openTab(event)">👤 캐릭터 설정</button>
+        <button class="tab-btn" data-tab="plot" onclick="openTab(event)">📋 플롯 보드</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section id="character" class="section-card">
+        <h2>캐릭터</h2>
+        
+        <div style="margin-bottom:12px;">
+          <button class="btn" onclick="openCharacterModal()">+ 캐릭터 추가</button>
+        </div>
+
+        <div id="character-list"></div>
+      </section>
+
+      <section id="plot" class="section-card" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+          <h2 style="margin:0">플롯 보드</h2>
+          <div style="display:flex; gap:8px;">
+            <button class="btn" onclick="openPlotModal()">플롯 추가</button>
+            <button class="btn ghost" onclick="exportBoardAsPNG()">보드 전체 PNG 저장</button>
+          </div>
+        </div>
+
+        <div class="board" id="plot-board" aria-live="polite">
+          <div class="column" data-stage="기" ondragover="allowDrop(event)" ondrop="onDrop(event, '기')">
+            <div class="col-head"><span>기 (도입)</span><span class="count muted" data-count="0">0</span></div>
+            <div class="cards"></div>
+            <button class="no-print add-card-btn" 
+                    onclick="openPlotModal(null, '기')">
+                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            </button>
+          </div>
+
+          <div class="column" data-stage="승" ondragover="allowDrop(event)" ondrop="onDrop(event, '승')">
+            <div class="col-head"><span>승 (전개)</span><span class="count muted" data-count="0">0</span></div>
+            <div class="cards"></div>
+            <button class="no-print add-card-btn" 
+                    onclick="openPlotModal(null, '승')">
+                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            </button>
+          </div>
+
+          <div class="column" data-stage="전" ondragover="allowDrop(event)" ondrop="onDrop(event, '전')">
+            <div class="col-head"><span>전 (위기/절정)</span><span class="count muted" data-count="0">0</span></div>
+            <div class="cards"></div>
+            <button class="no-print add-card-btn" 
+                    onclick="openPlotModal(null, '전')">
+                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            </button>
+          </div>
+
+          <div class="column" data-stage="결" ondragover="allowDrop(event)" ondrop="onDrop(event, '결')">
+            <div class="col-head"><span>결 (결말)</span><span class="count muted" data-count="0">0</span></div>
+            <div class="cards"></div>
+            <button class="no-print add-card-btn" 
+                    onclick="openPlotModal(null, '결')">
+                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="plotModal" class="modal" onclick="if(event.target===this) closePlotModal()">
+    <div class="modal-content" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        플롯 카드 추가 / 수정
+        <button class="close" onclick="closePlotModal()" title="닫기">×</button>
+      </div>
+
+      <label for="plot-title">제목</label>
+      <input id="plot-title" placeholder="장면 제목">
+
+      <label for="plot-stage">단계</label>
+      <select id="plot-stage">
+        <option>기</option><option>승</option><option>전</option><option>결</option>
+      </select>
+
+      <label for="plot-chars">관련 캐릭터 (다중 선택)</label>
+      <select id="plot-chars" multiple size="6"></select>
+
+      <label for="plot-content">내용</label>
+      <textarea id="plot-content" rows="5" placeholder="이 장면의 요약/세부 묘사"></textarea>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+        <button class="btn ghost" onclick="closePlotModal()">취소</button>
+        <button class="btn" onclick="savePlotCard()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="charModal" class="modal" onclick="if(event.target===this) closeCharacterModal()">
+    <div class="modal-content" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        캐릭터 추가 / 수정
+        <button class="close" onclick="closeCharacterModal()" title="닫기">×</button>
+      </div>
+
+      <label for="modal-char-name">이름</label>
+      <input id="modal-char-name" placeholder="캐릭터 이름 (필수)">
+
+      <label for="modal-char-desc">특징 / 한줄 설명</label>
+      <input id="modal-char-desc" placeholder="성격, 역할 등">
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+        <button class="btn ghost" onclick="closeCharacterModal()">취소</button>
+        <button class="btn" onclick="saveCharacter()">저장</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Data */
+let characterData = [];
+let plotData = { '기': [], '승': [], '전': [], '결': [] };
+let editingPlotId = null;
+let editingCharId = null;
+
+/* Init */
+window.addEventListener('load', () => {
+  loadData();
+  renderCharacterList();
+  renderPlotBoard();
+  populatePlotCharSelect();
+  openTabByName('character');
+});
+
+/* Storage */
+function saveAll(){
+  localStorage.setItem('np_characterData', JSON.stringify(characterData));
+  localStorage.setItem('np_plotData', JSON.stringify(plotData));
+}
+function loadData(){
+  try {
+    const c = localStorage.getItem('np_characterData');
+    const p = localStorage.getItem('np_plotData');
+    if(c) characterData = JSON.parse(c);
+    if(p) plotData = JSON.parse(p);
+  } catch(e){ console.error(e); }
+}
+
+/* Tabs */
+function openTab(e){
+  const btn = e.currentTarget;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  openTabByName(tab);
+}
+function openTabByName(tab){
+  document.querySelectorAll('main .section-card').forEach(s=> s.style.display = 'none');
+  const el = document.getElementById(tab);
+  if(el) el.style.display = 'block';
+}
+
+/* Character */
+function openCharacterModal(prefillName='', prefillDesc='', id=null){
+  editingCharId = id;
+
+  // 모달 입력 필드 초기화 또는 기존 데이터 채우기
+  document.getElementById('modal-char-name').value = prefillName;
+  document.getElementById('modal-char-desc').value = prefillDesc;
+
+  document.getElementById('charModal').classList.add('open');
+  document.getElementById('modal-char-name').focus(); 
+}
+function closeCharacterModal(){
+  editingCharId = null;
+  document.getElementById('modal-char-name').value = '';
+  document.getElementById('modal-char-desc').value = '';
+  document.getElementById('charModal').classList.remove('open');
+}
+function saveCharacter(){
+  const name = document.getElementById('modal-char-name').value.trim();
+  const desc = document.getElementById('modal-char-desc').value.trim();
+  if(!name){ alert('이름을 입력하세요.'); return; }
+  if(editingCharId){
+    const c = characterData.find(x=>x.id===editingCharId);
+    if(c){ c.name = name; c.desc = desc; }
+  } else {
+    characterData.push({ id:Date.now().toString(), name, desc });
+  }
+  closeCharacterModal();
+  renderCharacterList();
+  populatePlotCharSelect();
+  saveAll();
+}
+function renderCharacterList(){
+  const wrap = document.getElementById('character-list');
+  wrap.innerHTML = '';
+  if(characterData.length===0){
+    // white-space: nowrap; 추가하여 줄 바꿈 방지
+    wrap.innerHTML = `<div class="muted" style="padding: 10px 0; white-space: nowrap;">아직 캐릭터가 없습니다. 추가 버튼을 눌러보세요.</div>`;
+    return;
+  }
+  characterData.forEach(c=>{
+    const div = document.createElement('div');
+    div.className = 'char-card';
+    div.innerHTML = `
+      <div class="char-name">${escapeHtml(c.name)}</div>
+      <div class="char-desc">${escapeHtml(c.desc||'')}</div>
+      <button class="icon-btn" title="편집" onclick="event.stopPropagation(); editCharacter('${c.id}')"><span class="material-icons" style="font-size:18px">edit</span></button>
+      <button class="icon-btn danger" title="삭제" onclick="event.stopPropagation(); deleteCharacter('${c.id}')"><span class="material-icons" style="font-size:18px">delete</span></button>
+    `;
+    wrap.appendChild(div);
+  });
+}
+function editCharacter(id){
+  const c = characterData.find(x=>x.id===id);
+  if(!c) return;
+  openCharacterModal(c.name, c.desc, id);
+}
+function deleteCharacter(id){
+  if(!confirm('정말로 이 캐릭터를 삭제하시겠습니까? 관련 플롯의 연결도 제거됩니다.')) return;
+  characterData = characterData.filter(x=>x.id!==id);
+  for(const s of Object.keys(plotData)){
+    plotData[s].forEach(card => {
+      if(card.charIds) card.charIds = card.charIds.filter(cid=>cid!==id);
+    });
+  }
+  renderCharacterList();
+  renderPlotBoard();
+  populatePlotCharSelect();
+  saveAll();
+}
+
+/* Plot modal */
+function openPlotModal(id=null, stagePrefill='기'){
+  editingPlotId = id;
+  if(id){
+    let found=null;
+    for(const s of Object.keys(plotData)){
+      const f = plotData[s].find(c=>c.id===id);
+      if(f){ found=f; break; }
+    }
+    if(found){
+      document.getElementById('plot-title').value = found.title;
+      document.getElementById('plot-content').value = found.content;
+      document.getElementById('plot-stage').value = found.stage || stagePrefill;
+      populatePlotCharSelect(found.charIds || []);
+    } else populatePlotCharSelect([]);
+  } else {
+    document.getElementById('plot-title').value = '';
+    document.getElementById('plot-content').value = '';
+    document.getElementById('plot-stage').value = stagePrefill;
+    populatePlotCharSelect([]);
+  }
+  document.getElementById('plotModal').classList.add('open');
+  document.getElementById('plot-title').focus(); 
+}
+function closePlotModal(){
+  editingPlotId = null;
+  document.getElementById('plot-title').value='';
+  document.getElementById('plot-content').value='';
+  document.getElementById('plotModal').classList.remove('open');
+}
+function populatePlotCharSelect(selectedIds=[]){
+  const sel = document.getElementById('plot-chars');
+  sel.innerHTML = '';
+  characterData.forEach(c=>{
+    const op = document.createElement('option');
+    op.value = c.id;
+    op.textContent = c.name;
+    if(selectedIds.includes(c.id)) op.selected = true;
+    sel.appendChild(op);
+  });
+}
+
+/* Save plot */
+function savePlotCard(){
+  const title = document.getElementById('plot-title').value.trim();
+  const content = document.getElementById('plot-content').value.trim();
+  const stage = document.getElementById('plot-stage').value;
+  const charIds = Array.from(document.getElementById('plot-chars').selectedOptions).map(o=>o.value);
+  if(!title){ alert('제목을 입력하세요.'); return; }
+
+  if(editingPlotId){
+    for(const s of Object.keys(plotData)){
+      const idx = plotData[s].findIndex(c=>c.id===editingPlotId);
+      if(idx!==-1){
+        if(s !== stage){
+          const card = plotData[s].splice(idx,1)[0];
+          card.title = title; card.content = content; card.stage = stage; card.charIds = charIds;
+          plotData[stage].push(card);
+        } else {
+          plotData[s][idx].title = title;
+          plotData[s][idx].content = content;
+          plotData[s][idx].charIds = charIds;
+        }
+        break;
+      }
+    }
+  } else {
+    const id = Date.now().toString();
+    plotData[stage].push({ id, title, content, stage, charIds });
+  }
+
+  closePlotModal();
+  renderPlotBoard();
+  saveAll();
+}
+
+/* Delete plot */
+function deletePlotCard(id, stage){
+  if(!confirm('플롯 카드를 삭제하겠습니까?')) return;
+  plotData[stage] = plotData[stage].filter(c=>c.id!==id);
+  renderPlotBoard(); saveAll();
+}
+
+/* Render board */
+function renderPlotBoard(){
+  for(const col of document.querySelectorAll('.column')){
+    const stage = col.dataset.stage;
+    const container = col.querySelector('.cards');
+    container.innerHTML = '';
+    const list = plotData[stage] || [];
+    list.forEach(card=>{
+      const el = document.createElement('div');
+      el.className = 'plot-card';
+      el.draggable = true;
+      el.dataset.id = card.id;
+      el.dataset.stage = stage;
+      el.ondragstart = onDragStart;
+      el.ondragend = onDragEnd;
+      el.innerHTML = `
+        <div class="card-actions no-print">
+          <button class="icon-btn" title="편집" onclick="event.stopPropagation(); openPlotModal('${card.id}', '${stage}')"><span class="material-icons" style="font-size:18px">edit</span></button>
+          <button class="icon-btn danger" title="삭제" onclick="event.stopPropagation(); deletePlotCard('${card.id}','${stage}')"><span class="material-icons" style="font-size:18px">delete</span></button>
+        </div>
+        <div class="title">${escapeHtml(card.title)}</div>
+        <div class="content">${escapeHtml(card.content)}</div>
+        <div class="tags">${(card.charIds||[]).map(cid=>{ const ch = characterData.find(x=>x.id===cid); return ch ? `<span class="tag">${escapeHtml(ch.name)}</span>` : '' }).join('')}</div>
+      `;
+      container.appendChild(el);
+    });
+    const counter = col.querySelector('.count');
+    if(counter) counter.textContent = list.length;
+  }
+}
+
+/* Drag & Drop */
+let draggingEl = null;
+function onDragStart(e){
+  draggingEl = e.target;
+  e.dataTransfer.setData('text/plain', e.target.dataset.id);
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(()=> e.target.classList.add('dragging'), 10);
+}
+function onDragEnd(){
+  if(draggingEl) draggingEl.classList.remove('dragging');
+  draggingEl = null;
+}
+// 드래그 허용 (column 자체에 이벤트를 걸어 빈 공간에도 드롭이 가능하도록 처리)
+function allowDrop(e){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+
+function onDrop(e, newStage){
+  e.preventDefault();
+  const id = e.dataTransfer.getData('text/plain');
+  if(!id) return;
+  let moved = null;
+  for(const s of Object.keys(plotData)){
+    const idx = plotData[s].findIndex(c=>c.id===id);
+    if(idx!==-1){
+      moved = plotData[s].splice(idx,1)[0];
+      break;
+    }
+  }
+  if(!moved) return;
+  moved.stage = newStage;
+  plotData[newStage].push(moved);
+  renderPlotBoard(); saveAll();
+}
+
+/* Export board as PNG (uses html2canvas) */
+async function exportBoardAsPNG(){
+  const board = document.getElementById('plot-board');
+  const allColumns = document.querySelectorAll('.column'); 
+  const noPrintEls = board.querySelectorAll('.no-print');
+  const exportBtn = document.querySelector('.btn.ghost'); 
+  
+  // 1. 버튼 비활성화 및 텍스트 변경
+  exportBtn.disabled = true;
+  exportBtn.textContent = '저장 중...';
+  
+  // 2. 캡처 시 숨길 요소 숨기기
+  noPrintEls.forEach(el => el.classList.add('no-print'));
+  
+  // 3. 모든 컬럼의 높이 제한 해제
+  allColumns.forEach(col => col.classList.add('capture-full-height')); 
+
+  // 4. 보드에 확장 클래스 적용
+  board.classList.add('capture-expand');
+
+  // ✨핵심 수정: DOM 변경 후 잠시 대기하여 브라우저가 레이아웃을 다시 계산하도록 강제 (잘림 현상 방지)
+  await new Promise(resolve => setTimeout(resolve, 50)); 
+
+  // 5. 캡처할 너비/높이를 클래스 적용 후 scrollWidth/ScrollHeight로 계산
+  const captureWidth = board.scrollWidth;
+  const captureHeight = board.scrollHeight;
+
+  try {
+    const canvas = await html2canvas(board, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: captureWidth, 
+      height: captureHeight,
+      windowWidth: captureWidth,
+      windowHeight: captureHeight
+    });
+    
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `plot-board_${new Date().toISOString().slice(0,10)}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    alert('PNG 파일 저장이 완료되었습니다.');
+  } catch(err){
+    console.error('이미지 저장 실패', err);
+    alert('PNG 저장에 실패했습니다. (브라우저 보안/리소스 제한 가능성)');
+  } finally {
+    // 6. 클래스 및 숨긴 요소 복구 및 버튼 재활성화
+    board.classList.remove('capture-expand');
+    allColumns.forEach(col => col.classList.remove('capture-full-height')); 
+    noPrintEls.forEach(el => el.classList.remove('no-print'));
+    
+    exportBtn.disabled = false;
+    exportBtn.textContent = '보드 전체 PNG 저장';
+  }
+}
+
+/* Helpers */
+function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+/* Expose for console testing */
+window._np = { characterData, plotData, saveAll, loadData, renderPlotBoard, renderCharacterList };
+
+</script>
+</body>
+</html>
