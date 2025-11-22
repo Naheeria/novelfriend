@@ -115,7 +115,7 @@
     color: var(--muted) !important;
   }
 
-  /* 1. ✨추가: '+' 버튼에 대한 명시적인 CSS 스타일 */
+  /* '+' 버튼에 대한 명시적인 CSS 스타일 */
   .add-card-btn {
     width: 100%; 
     padding: 8px; 
@@ -209,6 +209,14 @@
   .tag{ font-size:12px; padding:4px 8px; background:#eef2ff; border-radius:8px; color:#2a3a9d; }
 
   .plot-card .card-actions{ position:absolute; top:8px; right:8px; display:flex; gap:6px; }
+  /* 플롯 카드 내의 삭제 버튼 아이콘 위치 조정 */
+  .plot-card .card-actions .icon-btn.delete-plot-btn {
+      position: relative; /* 상대적인 위치로 변경하여 card-actions 안에 배치 */
+      top: 0;
+      right: 0;
+      padding: 4px; /* 크기를 약간 줄임 */
+  }
+
 
   /* 모달 스타일 (생략) */
   .modal{
@@ -322,36 +330,32 @@
           <div class="column" data-stage="기" ondragover="allowDrop(event)" ondrop="onDrop(event, '기')">
             <div class="col-head"><span>기 (도입)</span><span class="count muted" data-count="0">0</span></div>
             <div class="cards"></div>
-            <button class="no-print add-card-btn" 
-                    onclick="openPlotModal(null, '기')">
-                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            <button class="add-card-btn" onclick="openPlotModal(null, '기')">
+              <span class="material-icons" style="font-size:18px">add</span> 카드 추가
             </button>
           </div>
 
           <div class="column" data-stage="승" ondragover="allowDrop(event)" ondrop="onDrop(event, '승')">
             <div class="col-head"><span>승 (전개)</span><span class="count muted" data-count="0">0</span></div>
             <div class="cards"></div>
-            <button class="no-print add-card-btn" 
-                    onclick="openPlotModal(null, '승')">
-                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            <button class="add-card-btn" onclick="openPlotModal(null, '승')">
+              <span class="material-icons" style="font-size:18px">add</span> 카드 추가
             </button>
           </div>
 
           <div class="column" data-stage="전" ondragover="allowDrop(event)" ondrop="onDrop(event, '전')">
             <div class="col-head"><span>전 (위기/절정)</span><span class="count muted" data-count="0">0</span></div>
             <div class="cards"></div>
-            <button class="no-print add-card-btn" 
-                    onclick="openPlotModal(null, '전')">
-                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            <button class="add-card-btn" onclick="openPlotModal(null, '전')">
+              <span class="material-icons" style="font-size:18px">add</span> 카드 추가
             </button>
           </div>
 
           <div class="column" data-stage="결" ondragover="allowDrop(event)" ondrop="onDrop(event, '결')">
             <div class="col-head"><span>결 (결말)</span><span class="count muted" data-count="0">0</span></div>
             <div class="cards"></div>
-            <button class="no-print add-card-btn" 
-                    onclick="openPlotModal(null, '결')">
-                    <span class="material-icons" style="font-size:18px">add</span> 카드 추가
+            <button class="add-card-btn" onclick="openPlotModal(null, '결')">
+              <span class="material-icons" style="font-size:18px">add</span> 카드 추가
             </button>
           </div>
         </div>
@@ -620,10 +624,11 @@ function renderPlotBoard(){
       el.dataset.stage = stage;
       el.ondragstart = onDragStart;
       el.ondragend = onDragEnd;
+      // ✨수정: card-actions에 no-print 클래스 제거
       el.innerHTML = `
-        <div class="card-actions no-print">
+        <div class="card-actions">
           <button class="icon-btn" title="편집" onclick="event.stopPropagation(); openPlotModal('${card.id}', '${stage}')"><span class="material-icons" style="font-size:18px">edit</span></button>
-          <button class="icon-btn danger" title="삭제" onclick="event.stopPropagation(); deletePlotCard('${card.id}','${stage}')"><span class="material-icons" style="font-size:18px">delete</span></button>
+          <button class="icon-btn danger delete-plot-btn" title="삭제" onclick="event.stopPropagation(); deletePlotCard('${card.id}','${stage}')"><span class="material-icons" style="font-size:18px">close</span></button>
         </div>
         <div class="title">${escapeHtml(card.title)}</div>
         <div class="content">${escapeHtml(card.content)}</div>
@@ -673,15 +678,16 @@ function onDrop(e, newStage){
 async function exportBoardAsPNG(){
   const board = document.getElementById('plot-board');
   const allColumns = document.querySelectorAll('.column'); 
-  const noPrintEls = board.querySelectorAll('.no-print');
+  // 캡처 시 숨겨야 할 요소들(모든 버튼과 아이콘)을 찾습니다.
+  const noPrintEls = board.querySelectorAll('.card-actions, .add-card-btn, .btn.ghost');
   const exportBtn = document.querySelector('.btn.ghost'); 
   
   // 1. 버튼 비활성화 및 텍스트 변경
   exportBtn.disabled = true;
   exportBtn.textContent = '저장 중...';
   
-  // 2. 캡처 시 숨길 요소 숨기기
-  noPrintEls.forEach(el => el.classList.add('no-print'));
+  // 2. 캡처 시 숨길 요소 숨기기 (CSS의 .no-print 역할을 일시적으로 JS에서 처리)
+  noPrintEls.forEach(el => el.style.visibility = 'hidden');
   
   // 3. 모든 컬럼의 높이 제한 해제
   allColumns.forEach(col => col.classList.add('capture-full-height')); 
@@ -689,7 +695,7 @@ async function exportBoardAsPNG(){
   // 4. 보드에 확장 클래스 적용
   board.classList.add('capture-expand');
 
-  // ✨핵심 수정: DOM 변경 후 잠시 대기하여 브라우저가 레이아웃을 다시 계산하도록 강제 (잘림 현상 방지)
+  // DOM 변경 후 잠시 대기하여 브라우저가 레이아웃을 다시 계산하도록 강제 (잘림 현상 방지)
   await new Promise(resolve => setTimeout(resolve, 50)); 
 
   // 5. 캡처할 너비/높이를 클래스 적용 후 scrollWidth/ScrollHeight로 계산
@@ -722,8 +728,10 @@ async function exportBoardAsPNG(){
     // 6. 클래스 및 숨긴 요소 복구 및 버튼 재활성화
     board.classList.remove('capture-expand');
     allColumns.forEach(col => col.classList.remove('capture-full-height')); 
-    noPrintEls.forEach(el => el.classList.remove('no-print'));
     
+    // ✨ 수정: 캡처 전에 JS로 숨겼던 모든 요소를 다시 보이도록 visibility 속성 제거
+    noPrintEls.forEach(el => el.style.removeProperty('visibility')); 
+
     exportBtn.disabled = false;
     exportBtn.textContent = '보드 전체 PNG 저장';
   }
