@@ -114,6 +114,15 @@
     border-color: #f3f4f6 !important;
     color: var(--muted) !important;
   }
+  /* 버튼에 danger 스타일 추가 */
+  .btn.danger {
+    background: var(--danger);
+    color: #fff;
+  }
+  .btn.danger:hover {
+    background: #c30707; /* 조금 더 어두운 빨간색 */
+  }
+
 
   /* '+' 버튼에 대한 명시적인 CSS 스타일 */
   .add-card-btn {
@@ -321,6 +330,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
           <h2 style="margin:0">플롯 보드</h2>
           <div style="display:flex; gap:8px;">
+            <button class="btn danger" onclick="resetPlotBoard()">플롯 초기화</button>
             <button class="btn" onclick="openPlotModal()">플롯 추가</button>
             <button class="btn ghost" onclick="exportBoardAsPNG()">보드 전체 PNG 저장</button>
           </div>
@@ -609,6 +619,20 @@ function deletePlotCard(id, stage){
   renderPlotBoard(); saveAll();
 }
 
+/* ✨ 플롯 초기화 기능 추가 */
+function resetPlotBoard(){
+    if(!confirm('경고: 플롯 보드의 모든 카드를 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+    
+    // plotData를 완전히 초기화
+    plotData = { '기': [], '승': [], '전': [], '결': [] };
+    
+    // 화면 및 로컬 스토리지 갱신
+    renderPlotBoard();
+    saveAll();
+    alert('플롯 보드의 모든 카드가 삭제되었습니다.');
+}
+
+
 /* Render board */
 function renderPlotBoard(){
   for(const col of document.querySelectorAll('.column')){
@@ -679,7 +703,7 @@ async function exportBoardAsPNG(){
   const board = document.getElementById('plot-board');
   const allColumns = document.querySelectorAll('.column'); 
   // 캡처 시 숨겨야 할 요소들(모든 버튼과 아이콘)을 찾습니다.
-  const noPrintEls = board.querySelectorAll('.card-actions, .add-card-btn, .btn.ghost');
+  const noPrintEls = board.querySelectorAll('.card-actions, .add-card-btn, .btn.danger, .btn.ghost');
   const exportBtn = document.querySelector('.btn.ghost'); 
   
   // 1. 버튼 비활성화 및 텍스트 변경
